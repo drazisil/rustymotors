@@ -2,6 +2,7 @@ import { Server } from "node:http";
 import {
   gameServer,
   loginServer,
+  mcotsServer,
   profileServer,
   webServer,
 } from "./src/index.js";
@@ -27,6 +28,7 @@ function startServers() {
   loginServer.listen(8226, () => console.log("Listening on port 8226"));
   profileServer.listen(8227, () => console.log("Listening on port 8227"));
   gameServer.listen(8228, () => console.log("Listening on port 8228"));
+  mcotsServer.listen(43300, () => console.log("Listening on port 43300"));
 
   console.log("Servers started");
 }
@@ -44,6 +46,8 @@ function stopServers() {
   profileServer.close();
   console.log("Stopping game server");
   gameServer.close();
+  console.log("Stopping mcots server");
+  mcotsServer.close();
 
   console.log("Servers stopped");
   process.stdin.setRawMode(false);
@@ -86,8 +90,6 @@ if (process.stdin.isTTY) {
  */
 while (running) {
   await new Promise((resolve) => setTimeout(resolve, 1000));
-
-  console.log("Main loop");
 }
 
 console.log("Program ended");

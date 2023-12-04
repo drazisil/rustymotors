@@ -12,29 +12,29 @@ webServer.use(express.json());
 webServer.use(router);
 
 /**
- * Start a TCP server that listens on port 8226
+ * Create TCP servers for login, profile, game, and mcots
  */
 const loginServer = net.createServer();
 const profileServer = net.createServer();
 const gameServer = net.createServer();
+const mcotsServer = net.createServer();
 
 /**
  * All 3 servers have the same connection handler
  */
 const connectionHandler = (socket: net.Socket) => {
+  console.log(`Connection from ${socket.remoteAddress}:${socket.remotePort}`);
   socket.on("data", (data) => {
-    console.log(data);
+    console.log(data.toString("hex"));
   });
-}
+};
 
 loginServer.on("connection", connectionHandler);
 profileServer.on("connection", connectionHandler);
 gameServer.on("connection", connectionHandler);
-
-
-
+mcotsServer.on("connection", connectionHandler);
 
 /**
  * Export all servers
  */
-export { webServer, loginServer, profileServer, gameServer };
+export { webServer, loginServer, profileServer, gameServer, mcotsServer };
