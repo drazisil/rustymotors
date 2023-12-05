@@ -219,6 +219,13 @@ export function unpack(packCode: PackString, data: Buffer) {
     }
   }
 
+  // If the offset is not at the end of the data, log a warning
+    if (dataOffset !== data.length) {
+        console.warn(
+        `Offset ${dataOffset} is not at the end of the data (${data.length})`
+        );
+    }
+
   // Return the unpacked data
   return unpackedData;
 }

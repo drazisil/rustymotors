@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "tsx --openssl-legacy-provider server.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "vitest run --coverage"
   },
   "type": "module",
   "keywords": [],
@@ -15,6 +15,7 @@
     "@types/node": "^20.10.2",
     "cors": "^2.8.5",
     "express": "^4.18.2",
+    "jest": "^29.7.0",
     "tsx": "^4.6.2",
     "typescript": "^5.3.2"
   },
@@ -24,6 +25,8 @@
   "devDependencies": {
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
-    "prettier": "^3.1.0"
+    "@vitest/coverage-v8": "^1.0.1",
+    "prettier": "^3.1.0",
+    "vitest": "^1.0.1"
   }
 }
