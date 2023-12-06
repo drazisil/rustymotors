@@ -1,229 +1,214 @@
-export function unpackShort(endianness: "LE" | "BE", data: Buffer) {
-    if (endianness === "LE") {
-      return data.readUInt16LE();
-    }
-    return data.readUInt16BE();
+export function packShort(
+  endianness: "LE" | "BE",
+  data: unknown,
+  length?: number,
+  includeLength?: boolean
+) {
+  const buffer = Buffer.alloc(2);
+  if (typeof data !== "number") {
+    throw new Error("Data must be a number");
   }
-  
-  export function unpackByte(endianness: "LE" | "BE", data: Buffer) {
-    if (endianness === "LE") {
-      return data.readUInt8();
-    }
-    return data.readUInt8();
+  if (endianness === "LE") {
+    buffer.writeUInt16LE(data);
+  } else {
+    buffer.writeUInt16BE(data);
   }
-  
-  export function unpackLong(endianness: "LE" | "BE", data: Buffer) {
-    if (endianness === "LE") {
-      return data.readUInt32LE();
-    }
-    return data.readUInt32BE();
+  return buffer;
+}
+
+export function packByte(
+  endianness: "LE" | "BE",
+  data: unknown,
+  length?: number,
+  includeLength?: boolean
+) {
+  const buffer = Buffer.alloc(1);
+  if (typeof data !== "number") {
+    throw new Error("Data must be a number");
   }
-  
-  export function unpackBlob(endianness: "LE" | "BE", data: Buffer, length?: number) {
-    if (length) {
-      return data.subarray(0, length);
-    }
-    return data;
+  if (endianness === "LE") {
+    buffer.writeUInt8(data);
+  } else {
+    buffer.writeUInt8(data);
   }
-  
-  export function unpackFloat(endianness: "LE" | "BE", data: Buffer) {
-    if (endianness === "LE") {
-      return data.readFloatLE();
-    }
-    return data.readFloatBE();
+  return buffer;
+}
+
+export function packLong(
+  endianness: "LE" | "BE",
+  data: unknown,
+  length?: number,
+  includeLength?: boolean
+) {
+  const buffer = Buffer.alloc(4);
+  if (typeof data !== "number") {
+    throw new Error("Data must be a number");
   }
-  
-  function unpackBool(endianness: "LE" | "BE", data: Buffer) {
-    return data.readUInt8() === 1;
+  if (endianness === "LE") {
+    buffer.writeUInt32LE(data);
+  } else {
+    buffer.writeUInt32BE(data);
   }
-  
-  export function unpackLengthShort(endianness: "LE" | "BE", data: Buffer) {
-    if (endianness === "LE") {
-      return data.readUInt16LE();
-    }
-    return data.readUInt16BE();
+  return buffer;
+}
+
+export function packBlob(
+  endianness: "LE" | "BE",
+  data: unknown,
+  length?: number,
+  includeLength: boolean = true
+) {
+
+  if (length === undefined) {
+    throw new Error("Length must be provided for blobs");
   }
-  
-  export function unpackStringVar(
-    endianness: "LE" | "BE",
-    data: Buffer,
-    length?: number
-  ) {
-    if (length) {
-      return data.subarray(0, length);
-    }
-    throw new Error("Length must be provided for variable length string");
+
+  if (!(data instanceof Buffer)) {
+    throw new Error("Data must be a buffer");
   }
-  
-  export function unpackStringFixed(
-    endianness: "LE" | "BE",
-    data: Buffer,
-    length?: number
-  ) {
-    if (length) {
-      return data.subarray(0, length);
-    }
-    throw new Error("Length must be provided for fixed length string");
+
+  let offset = 0;
+
+  if (includeLength === true) {
+    length += 2;
+    offset = 2;
   }
-  
-  export function packShort(
-    endianness: "LE" | "BE",
-    data: unknown,
-    length?: number,
-    includeLength?: boolean
-  ) {
-    const buffer = Buffer.alloc(2);
-    if (typeof data !== "number") {
-      throw new Error("Data must be a number");
-    }
-    if (endianness === "LE") {
-      buffer.writeUInt16LE(data);
-    } else {
-      buffer.writeUInt16BE(data);
-    }
-    return buffer;
+
+  const buffer = Buffer.alloc(length);
+
+  if (endianness === "LE") {
+    buffer.writeUInt16LE(length - 2);
+  } else {
+    buffer.writeUInt16BE(length - 2);
   }
-  
-  export function packByte(
-    endianness: "LE" | "BE",
-    data: unknown,
-    length?: number,
-    includeLength?: boolean
-  ) {
-    const buffer = Buffer.alloc(1);
-    if (typeof data !== "number") {
-      throw new Error("Data must be a number");
+
+  for (const byte of data) {
+    if (offset >= length) {
+      break;
     }
-    if (endianness === "LE") {
-      buffer.writeUInt8(data);
-    } else {
-      buffer.writeUInt8(data);
-    }
-    return buffer;
+    buffer.writeUInt8(byte, offset);
+    offset++;
   }
-  
-  export function packLong(
-    endianness: "LE" | "BE",
-    data: unknown,
-    length?: number,
-    includeLength?: boolean
-  ) {
-    const buffer = Buffer.alloc(4);
-    if (typeof data !== "number") {
-      throw new Error("Data must be a number");
-    }
-    if (endianness === "LE") {
-      buffer.writeUInt32LE(data);
-    } else {
-      buffer.writeUInt32BE(data);
-    }
-    return buffer;
+
+  return buffer;
+}
+
+export function packFloat(
+  endianness: "LE" | "BE",
+  data: unknown,
+  length?: number,
+  includeLength?: boolean
+) {
+  const buffer = Buffer.alloc(4);
+  if (typeof data !== "number") {
+    throw new Error("Data must be a number");
   }
-  
-  export function packBlob(
-    endianness: "LE" | "BE",
-    data: unknown,
-    length?: number,
-    includeLength?: boolean
-  ) {
-    const buffer = Buffer.alloc(4);
-    if (typeof data !== "number") {
-      throw new Error("Data must be a number");
-    }
-    if (endianness === "LE") {
-      buffer.writeUInt32LE(data);
-    } else {
-      buffer.writeUInt32BE(data);
-    }
-    return buffer;
+  if (endianness === "LE") {
+    buffer.writeFloatLE(data);
+  } else {
+    buffer.writeFloatBE(data);
   }
-  
-  export   function packFloat(
-    endianness: "LE" | "BE",
-    data: unknown,
-    length?: number,
-    includeLength?: boolean
-  ) {
-    const buffer = Buffer.alloc(4);
-    if (typeof data !== "number") {
-      throw new Error("Data must be a number");
-    }
-    if (endianness === "LE") {
-      buffer.writeFloatLE(data);
-    } else {
-      buffer.writeFloatBE(data);
-    }
-    return buffer;
+  return buffer;
+}
+
+/**
+ * Packs a boolean into a 2 byte buffer
+ */
+export function packBool(
+  endianness: "LE" | "BE",
+  data: unknown,
+  length?: number,
+  includeLength?: boolean
+) {
+  const buffer = Buffer.alloc(2);
+  if (typeof data !== "boolean") {
+    throw new Error("Data must be a boolean");
   }
-  
-  export function packBool(
-    endianness: "LE" | "BE",
-    data: unknown,
-    length?: number,
-    includeLength?: boolean
-  ) {
-    const buffer = Buffer.alloc(1);
-    if (typeof data !== "number") {
-      throw new Error("Data must be a number");
-    }
-    if (endianness === "LE") {
-      buffer.writeUInt8(data);
-    } else {
-      buffer.writeUInt8(data);
-    }
-    return buffer;
+  if (endianness === "LE") {
+    buffer.writeUInt8(data ? 1 : 0, 0);
+  } else {
+    buffer.writeUInt8(data ? 1 : 0, 1);
   }
-  
-  export function packLengthShort(
-    endianness: "LE" | "BE",
-    data: unknown,
-    length?: number,
-    includeLength?: boolean
-  ) {
-    const buffer = Buffer.alloc(2);
-    if (typeof data !== "number") {
-      throw new Error("Data must be a number");
-    }
-    if (endianness === "LE") {
-      buffer.writeUInt16LE(data);
-    } else {
-      buffer.writeUInt16BE(data);
-    }
-    return buffer;
+  return buffer;
+}
+
+export function packLengthShort(
+  endianness: "LE" | "BE",
+  data: unknown,
+  length?: number,
+  includeLength: boolean = false
+) {
+  const buffer = Buffer.alloc(2);
+  if (typeof data !== "number") {
+    throw new Error("Data must be a number");
   }
-  
-  export function packStringVar(
-    endianness: "LE" | "BE",
-    data: unknown,
-    length?: number,
-    includeLength?: boolean
-  ) {
-    const buffer = Buffer.alloc(2);
-    if (typeof data !== "number") {
-      throw new Error("Data must be a number");
-    }
-    if (endianness === "LE") {
-      buffer.writeUInt16LE(data);
-    } else {
-      buffer.writeUInt16BE(data);
-    }
-    return buffer;
+  if (endianness === "LE") {
+    buffer.writeUInt16LE(data);
+  } else {
+    buffer.writeUInt16BE(data);
   }
-  
-  export function packStringFixed(
-    endianness: "LE" | "BE",
-    data: unknown,
-    length?: number,
-    includeLength?: boolean
-  ) {
-    const buffer = Buffer.alloc(2);
-    if (typeof data !== "number") {
-      throw new Error("Data must be a number");
-    }
-    if (endianness === "LE") {
-      buffer.writeUInt16LE(data);
-    } else {
-      buffer.writeUInt16BE(data);
-    }
-    return buffer;
+  return buffer;
+}
+
+export function packStringVar(
+  endianness: "LE" | "BE",
+  data: unknown,
+  length?: number,
+  includeLength: boolean = true
+) {
+
+  if (length === undefined) {
+    throw new Error("Length must be provided for variable length strings");
   }
+
+  // Verify that data is a string
+  if (typeof data !== "string") {
+    throw new Error("Data must be a string");
+  }
+
+  if (includeLength === false) {
+    throw new Error("includeLength must be true for variable length strings");
+  }
+
+  const buffer = Buffer.alloc(length + 2);
+
+  let offset = 0;
+
+  if (endianness === "LE") {
+    buffer.writeUInt16LE(length);
+  } else {
+    buffer.writeUInt16BE(length);
+  }
+
+  offset = 2;
+
+  buffer.write(data.substring(0, length), offset);
+
+  return buffer;
+}
+
+export function packStringFixed(
+  endianness: "LE" | "BE",
+  data: unknown,
+  length?: number,
+  includeLength?: boolean
+) {
+
+  if (length === undefined) {
+    throw new Error("Length must be provided for fixed length strings");
+  }
+
+  if (includeLength === true) {
+    throw new Error("includeLength must be false for fixed length strings");
+  }
+
+  const buffer = Buffer.alloc(length);
+
+  if (typeof data !== "string") {
+    throw new Error("Data must be a string");
+  }
+
+  buffer.write(data.substring(0, length));
+
+  return buffer;
+}
