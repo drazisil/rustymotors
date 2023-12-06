@@ -25,7 +25,8 @@ export type PackCode =
   // Multi-part data
   | "LENGTH_SHORT" // 2 bytes - Number - Length of the following data
   | "STRING_VAR" // Variable length string - String length is in the pack string, but not included in the packed data
-  | "STRING_FIXED"; // Fixed length string - Must be preceded by a LENGTH_SHORT
+  | "STRING_FIXED" // Fixed length string - Must be preceded by a LENGTH_SHORT
+  | "END"; // End of pack string - Discard any remaining data
 
 export type PackString = PackCode[];
 

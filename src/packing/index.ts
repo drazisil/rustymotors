@@ -1,14 +1,6 @@
 import e from "express";
 import { Unpacker, PackCode, Packer, PackString } from "../constants.js";
 import {
-  unpackShort,
-  unpackByte,
-  unpackLong,
-  unpackBlob,
-  unpackFloat,
-  unpackLengthShort,
-  unpackStringVar,
-  unpackStringFixed,
   packShort,
   packByte,
   packLong,
@@ -19,7 +11,17 @@ import {
   packStringVar,
   packStringFixed,
 } from "./packers.js";
-import { unpackBool } from "./unpackers.js";
+import {
+  unpackBool,
+  unpackByte,
+  unpackFloat,
+  unpackLong,
+  unpackShort,
+  unpackLengthShort,
+  unpackStringFixed,
+  unpackStringVar,
+  unpackBlob,
+} from "./unpackers.js";
 
 export const unpackers: Unpacker[] = [
   {
@@ -130,13 +132,13 @@ function getDataLength(packCode: PackCode, value: unknown) {
     case "FLOAT":
       return 4;
     case "BOOL":
-      return 1;
+      return 2;
     case "LENGTH_SHORT":
       return 2;
     case "STRING_VAR":
-      return (value as Buffer).length;
+      return (value as Buffer).length / 2;
     case "STRING_FIXED":
-      return (value as Buffer).length;
+      return (value as Buffer).length / 2;
   }
   throw new Error(`No data length found for pack code ${packCode}`);
 }
@@ -155,7 +157,13 @@ export function unpack(packCode: PackString, data: Buffer) {
     // Get the pack code
     const code = packCode[packStringIndex];
 
-    console.log(`Unpacking ${code} at offset ${dataOffset}, index ${packStringIndex}`);
+    console.log(
+      `Unpacking ${code} at offset ${dataOffset}, index ${packStringIndex}`
+    );
+
+    if (code === "END") {
+      break;
+    }
 
     // If the code is an endianness code, change the endianness
     if (code === "LE" || code === "BE") {
@@ -168,8 +176,10 @@ export function unpack(packCode: PackString, data: Buffer) {
     if (code === "LENGTH_SHORT") {
       length = unpackLengthShort(endianness, data.subarray(dataOffset));
 
+      console.log(`Length: ${length}`);
+
       // Move the offset past the length prefix
-      dataOffset += 1;
+      dataOffset += 2;
 
       // Move the index past the pack code
       packStringIndex++;
@@ -192,21 +202,21 @@ export function unpack(packCode: PackString, data: Buffer) {
       length
     );
 
-    // If the length was provided, move the offset past the length
-    if (length) {
-      dataOffset += length;
-    }
-
     console.log(`Adding type ${typeof unpacked} to unpacked data`);
 
     // Add the unpacked data to the array
     unpackedData.push(unpacked);
 
+    // If the length was provided, move the offset past the length
+    if (length) {
+      dataOffset += length;
+    } else {
+      // Advance the offset past the unpacked data
+      dataOffset += getDataLength(code, unpacked);
+    }
+
     // Reset the length
     length = undefined;
-
-    // Advance the offset past the unpacked data
-    dataOffset += getDataLength(code, unpacked);
 
     console.log(`New offset: ${dataOffset}`);
 
@@ -220,11 +230,12 @@ export function unpack(packCode: PackString, data: Buffer) {
   }
 
   // If the offset is not at the end of the data, log a warning
-    if (dataOffset !== data.length) {
-        console.warn(
-        `Offset ${dataOffset} is not at the end of the data (${data.length})`
-        );
-    }
+  if (dataOffset !== data.length) {
+    console.warn(
+      `Offset ${dataOffset} is not at the end of the data (${data.length})`
+    );
+    console.log(`Remaining data: ${data.subarray(dataOffset).toString("hex")}`);
+  }
 
   // Return the unpacked data
   return unpackedData;

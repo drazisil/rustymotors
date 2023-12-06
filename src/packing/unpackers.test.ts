@@ -75,7 +75,7 @@ describe('unpackers', () => {
             const result = unpackLengthShort('BE', data);
             expect(result).toEqual(0x0102);
         });
-        test('unpacks a length short in ltesttle endian', () => {
+        test('unpacks a length short in little endian', () => {
             const data = Buffer.from([0x01, 0x02]);
             const result = unpackLengthShort('LE', data);
             expect(result).toEqual(0x0201);
@@ -83,9 +83,9 @@ describe('unpackers', () => {
     });
     describe('unpackStringVar', () => {
         test('unpacks a string var', () => {
-            const data = Buffer.from([0x01, 0x02, 0x03, 0x04]);
-            const result = unpackStringVar('BE', data, 3);
-            expect(result).toStrictEqual(data.subarray(0, 3));
+            const data = Buffer.from([0x31, 0x32, 0x33, 0x34, 0x35]);
+            const result = unpackStringVar('BE', data, 4);
+            expect(result).toEqual('1234');
         });
         test('throws an error if no length is provided', () => {
             const data = Buffer.from([0x01, 0x02, 0x03, 0x04]);
@@ -94,9 +94,9 @@ describe('unpackers', () => {
     });
     describe('unpackStringFixed', () => {
         test('unpacks a string fixed', () => {
-            const data = Buffer.from([0x01, 0x02, 0x03, 0x04]);
+            const data = Buffer.from([0x31, 0x32, 0x33, 0x34, 0x35]);
             const result = unpackStringFixed('BE', data, 3);
-            expect(result).toStrictEqual(data.subarray(0, 3));
+            expect(result).toEqual('123');
         });
         test('throws an error if no length is provided', () => {
             const data = Buffer.from([0x01, 0x02, 0x03, 0x04]);
