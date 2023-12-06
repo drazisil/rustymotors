@@ -148,6 +148,7 @@ export function unpack(packCode: PackString, data: Buffer) {
   let packStringIndex = 0;
   let length;
   let endianness: "LE" | "BE" = "BE";
+  let code: PackCode = "BE";
 
   // Create a new array of unknowns to store the unpacked data
   const unpackedData: unknown[] = [];
@@ -155,7 +156,7 @@ export function unpack(packCode: PackString, data: Buffer) {
   // Loop through the pack string
   while (packStringIndex < packCode.length) {
     // Get the pack code
-    const code = packCode[packStringIndex];
+    code = packCode[packStringIndex];
 
     console.log(
       `Unpacking ${code} at offset ${dataOffset}, index ${packStringIndex}`
@@ -230,7 +231,7 @@ export function unpack(packCode: PackString, data: Buffer) {
   }
 
   // If the offset is not at the end of the data, log a warning
-  if (dataOffset !== data.length) {
+  if (dataOffset !== data.length && code !== "END") {
     console.warn(
       `Offset ${dataOffset} is not at the end of the data (${data.length})`
     );
