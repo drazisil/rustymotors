@@ -10,6 +10,7 @@ import { createPrivateKey } from "node:crypto";
 import { privateDecrypt } from "crypto";
 import { PackString } from "../packing/constants.js";
 import { pack, unpack } from "../packing/index.js";
+import { Transaction } from "@sentry/node";
 
 function displayStringasHex(s: string) {
   let hex = "";
@@ -63,7 +64,7 @@ function decryptSessionKey(encryptedSessionKey: string): Buffer {
   return unpackedString;
 }
 
-export async function handleLogin(connection: ConnectionRecord, data: any) {
+export async function handleLogin(connection: ConnectionRecord, data: any, transaction: Transaction) {
   console.log("Login");
 
   // Verify the data types
@@ -84,14 +85,25 @@ export async function handleLogin(connection: ConnectionRecord, data: any) {
     throw new Error("Invalid ticket");
   }
 
+  let span = transaction.startChild({
+    name: "decryptSessionKey",
+    op: "crypto.decipher"
+  })
+
   // Decrypt the session key
   const sessionKey = decryptSessionKey(encryptedSessionKey);
-
+  span.finish()
+ 
   // Log the session key
   console.log(`Session key: ${sessionKey.toString("hex")}`);
 
-  // Generate a session keyset ane save it
+  span = transaction.startChild({
+    name: "generateKeyset",
+    op: "crypto.general"
+  })
+  // Generate a session keyset and save it
   const keyset = await generateSessionKeyset(customer.id, sessionKey);
+  span.finish()
 
   // Save the session keyset
   await updateSessionKeyForCustomer(customer.id, keyset);
@@ -146,8 +158,14 @@ export async function handleLogin(connection: ConnectionRecord, data: any) {
     "END",
   ];
 
+  span = transaction.startChild({
+    name: "packResponse",
+    op: "serialize"
+  })
+
   // Pack the login response
   const loginResponse = pack(loginResponsePackString, loginResponseData);
+  span.finish()
 
   // Now, we need to update the length of the login response
   const loginResponseLength = loginResponse.length;
