@@ -1,8 +1,8 @@
-import { getTickets } from "./auth.js";
 import { ConnectionRecord } from "./connection.js";
-import { MessageType, PackCode, Packer, Unpacker } from "./constants.js";
+import { MessageType,  } from "./constants.js";
 import { handleLogin } from "./handlers/handleLogin.js";
-import { unpack, unpackers } from "./packing/index.js";
+import { unpack } from "./packing/index.js";
+import { login_inbound } from "./packing/packStrings.js";
 
 export function verifyDataType(data: any, type: string) {
   if (typeof data !== type) {
@@ -15,22 +15,7 @@ const messageTypes: MessageType[] = [
     messageId: 0x501,
     messageName: "login",
     direction: "inbound",
-    packString: [
-      "BE",
-      "SHORT",
-      "SHORT",
-      "SHORT",
-      "SHORT",
-      "LONG",
-      "LENGTH_SHORT",
-      "STRING_VAR",
-      "SHORT",
-      "LENGTH_SHORT",
-      "STRING_VAR",
-      "LENGTH_SHORT",
-      "STRING_VAR",
-      "END",
-    ],
+    packString: login_inbound,
     handler: handleLogin,
   },
 ];

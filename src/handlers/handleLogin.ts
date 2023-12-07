@@ -8,7 +8,7 @@ import {
 import { verifyDataType } from "../packet.js";
 import { createPrivateKey } from "node:crypto";
 import { privateDecrypt } from "crypto";
-import { PackString } from "../constants.js";
+import { PackString } from "../packing/constants.js";
 import { pack, unpack } from "../packing/index.js";
 
 function displayStringasHex(s: string) {
@@ -67,14 +67,14 @@ export async function handleLogin(connection: ConnectionRecord, data: any) {
   console.log("Login");
 
   // Verify the data types
-  verifyDataType(data[5], "string");
-  verifyDataType(data[7], "string");
-  verifyDataType(data[8], "string");
+  verifyDataType(data[1], "string");
+  verifyDataType(data[3], "string");
+  verifyDataType(data[4], "string");
 
   // Assign the data to variables
-  const ticket = data[5];
-  const encryptedSessionKey = data[7];
-  const serviceId = data[8];
+  const ticket = data[1];
+  const encryptedSessionKey = data[3];
+  const serviceId = data[4];
 
   // check if the ticket is valid
   const customer = await getCustomerByTicket(ticket);
