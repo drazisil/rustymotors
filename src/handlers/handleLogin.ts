@@ -1,11 +1,15 @@
 import { readFileSync } from "fs";
 import { getCustomerByTicket } from "../auth.js";
-import { ConnectionRecord } from "../connection.js";
+import {
+  ConnectionRecord,
+  generateSessionKeyset,
+  updateSessionKeyForCustomer,
+} from "../connection.js";
 import { verifyDataType } from "../packet.js";
 import { createPrivateKey } from "node:crypto";
 import { privateDecrypt } from "crypto";
 import { PackString } from "../constants.js";
-import { unpack } from "../packing/index.js";
+import { pack, unpack } from "../packing/index.js";
 
 function displayStringasHex(s: string) {
   let hex = "";
@@ -15,8 +19,7 @@ function displayStringasHex(s: string) {
   return hex;
 }
 
-
-function decryptSessionKey(encryptedSessionKey: string) {
+function decryptSessionKey(encryptedSessionKey: string): Buffer {
   // Get the private key
   const privateKey = readFileSync("./certs/private_key.pem");
 
@@ -35,8 +38,7 @@ function decryptSessionKey(encryptedSessionKey: string) {
   }
 
   // Decrypt the session key
-  const decryptedSessionKeyStructure
-   = privateDecrypt(
+  const decryptedSessionKeyStructure = privateDecrypt(
     {
       key: privateKey,
     },
@@ -47,17 +49,18 @@ function decryptSessionKey(encryptedSessionKey: string) {
   const packString: PackString = ["BE", "LENGTH_SHORT", "BLOB", "END"];
 
   // Unpack the session key
-  const unpackedSessionKey = unpack(packString, decryptedSessionKeyStructure
-    );
+  const unpackedSessionKey = unpack(packString, decryptedSessionKeyStructure);
 
-    const unpackedString = unpackedSessionKey[0] as Buffer;
+  const unpackedString = unpackedSessionKey[0] as Buffer;
 
-    // Log the unpacked values
+  // Log the unpacked values
   console.log(`Unpacked session key: ${unpackedString.length}`);
-
 
   // Log the unpacked session key
   console.log(`Unpacked session key: ${unpackedString.toString("hex")}`);
+
+  // Return the unpacked session key
+  return unpackedString;
 }
 
 export async function handleLogin(connection: ConnectionRecord, data: any) {
@@ -71,7 +74,7 @@ export async function handleLogin(connection: ConnectionRecord, data: any) {
   // Assign the data to variables
   const ticket = data[5];
   const encryptedSessionKey = data[7];
-  const serviveId = data[8];
+  const serviceId = data[8];
 
   // check if the ticket is valid
   const customer = await getCustomerByTicket(ticket);
@@ -82,6 +85,85 @@ export async function handleLogin(connection: ConnectionRecord, data: any) {
   }
 
   // Decrypt the session key
-  const decryptedSessionKeyStructure
-   = decryptSessionKey(encryptedSessionKey);
+  const sessionKey = decryptSessionKey(encryptedSessionKey);
+
+  // Log the session key
+  console.log(`Session key: ${sessionKey.toString("hex")}`);
+
+  // Generate a session keyset ane save it
+  const keyset = await generateSessionKeyset(customer.id, sessionKey);
+
+  // Save the session keyset
+  await updateSessionKeyForCustomer(customer.id, keyset);
+
+  // Log that we are sending the login response
+  console.log("Sending login response");
+
+  // Log the customer ID
+  console.log(`Customer ID: ${customer.id}`);
+
+  // Assemble the login response data for packing
+  const loginResponseData: unknown[] = [    
+    0x601, // short - message code
+    0, // length short - length of all data after packing
+    0x0101, // short - version
+    0, // short - reserved
+    0, // long - length of all data after packing
+    customer.id, // long - customer ID
+    0, //  long -   profile ID
+    sessionKey.byteLength, // length short - length of session key (not written by packer)
+    sessionKey.toString("hex"), // string fixed - session key
+    sessionKey.byteLength, // short - length of session key
+    false, // boo - banned
+    false, // boo - gagged
+    true, // boo - valid
+    4, // short - length of the service ID
+    4, // length short - length of the service ID (not written by packer)
+    serviceId, // string fixed - service ID
+    0, // short - metrics ID (not used)
+  ];
+
+  // Assemble the login response pack string
+  const loginResponsePackString: PackString = [
+    "BE",
+    "SHORT", // message code
+    "SHORT", // length of all data after packing
+    "SHORT", // version
+    "SHORT", // reserved
+    "LONG", // length of all data after packing
+    "LONG", // customer ID
+    "LONG", // profile ID
+    "LENGTH_SHORT", // length of session key, not written by packer
+    "STRING_FIXED", // session key
+    "SHORT", // length of session key, comes after session key
+    "BOOL",
+    "BOOL",
+    "BOOL",
+    "SHORT", // length of service ID, passing manually
+    "LENGTH_SHORT", // length of service ID, not written by packer
+    "STRING_FIXED",
+    "SHORT",
+    "END",
+  ];
+
+  // Pack the login response
+  const loginResponse = pack(loginResponsePackString, loginResponseData);
+
+  // Now, we need to update the length of the login response
+  const loginResponseLength = loginResponse.length;
+  loginResponse.writeUInt16BE(loginResponseLength, 2);
+  loginResponse.writeUInt32BE(loginResponseLength, 8);
+
+  // Log the login response
+  console.log(`Login response: ${loginResponse.toString("hex")}`);
+
+  // Send the login response
+  if (connection.socket) {
+    connection.socket.write(loginResponse);
+    connection.socket.write(loginResponse); // Another login response for some reason
+  } else {
+    throw new Error("No socket found for connection");
+  }
+
+  return;
 }

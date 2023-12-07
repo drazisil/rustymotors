@@ -7,7 +7,6 @@ import {
   packBlob,
   packFloat,
   packBool,
-  packLengthShort,
   packStringVar,
   packStringFixed,
 } from "./packers.js";
@@ -102,11 +101,7 @@ export const packers: Packer[] = [
     direction: "outbound",
     packFunction: packBool,
   },
-  {
-    packCode: "LENGTH_SHORT",
-    direction: "outbound",
-    packFunction: packLengthShort,
-  },
+
   {
     packCode: "STRING_VAR",
     direction: "outbound",
@@ -240,4 +235,111 @@ export function unpack(packCode: PackString, data: Buffer) {
 
   // Return the unpacked data
   return unpackedData;
+}
+
+/**
+ * Given a pack code and data, pack the data into a buffer
+ * @param packCode
+ * @param data
+ */
+export function pack(packCode: PackString, data: unknown[]) {
+  let dataIndex = 0;
+  let writeIndex = 0;
+  let packStringIndex = 0;
+  let length;
+  let endianness: "LE" | "BE" = "BE";
+  let code: PackCode = "BE";
+
+  // Create a large buffer to store the packed data
+  const packedData = Buffer.alloc(1024);
+
+  // Loop through the pack string
+  while (packStringIndex < packCode.length) {
+    // Get the pack code
+    code = packCode[packStringIndex];
+
+    console.log(
+      `Packing ${code} at data index ${dataIndex}, pack string index ${packStringIndex}`
+    );
+
+    if (code === "END") {
+      break;
+    }
+
+    // If the code is an endianness code, change the endianness
+    if (code === "LE" || code === "BE") {
+      endianness = code;
+      packStringIndex++;
+      continue;
+    }
+
+    // Log the data
+    console.log(
+      `Data: ${data[dataIndex]} (${typeof data[dataIndex]} bytes) with length ${
+        data[dataIndex].length
+      }`
+    );
+
+    // If the pack code is a length prefix, pack the data as a length prefix
+    if (code === "LENGTH_SHORT") {
+      // Set the length
+      length = data[dataIndex] as number;
+
+      console.log(`Length: ${length}`);
+
+      // Move the offset past the length prefix
+      dataIndex++;
+
+      // Move the index past the pack code
+      packStringIndex++;
+
+      continue;
+    }
+
+    // Get the packer for this pack code
+    const packer = packers.find((packer) => packer.packCode === code);
+
+    // If there is no packer, throw an error
+    if (!packer) {
+      throw new Error(`No packer found for pack code ${code}`);
+    }
+
+    // Pack the data
+    const packed = packer.packFunction(endianness, data[dataIndex], length);
+
+    console.log(`Adding packed ${packed.toString("hex")} to packed data`);
+
+    // Add the packed data to the buffer
+    packedData.set(packed, writeIndex);
+
+    // If the length was provided, move the offset past the length
+    if (length) {
+      writeIndex += length;
+    } else {
+      // Advance the offset past the unpacked data
+      writeIndex += getDataLength(code, packed);
+    }
+
+    // Reset the length
+    length = undefined;
+
+    console.log(`New offset: ${dataIndex}`);
+
+    // Advance the index past the pack code
+    packStringIndex++;
+
+    // Advance the data index
+    dataIndex++;
+  }
+
+  // If the offset is not at the end of the data, log a warning
+  if (dataIndex !== data.length && code !== "END") {
+    console.warn(
+      `Offset ${data[dataIndex]} is not at the end of the data (${data.length})`
+    );
+    console.log(`Remaining data: ${data.slice(dataIndex)}`);
+  }
+
+  // Return the packed data
+  return packedData.subarray(0, writeIndex);
 }
