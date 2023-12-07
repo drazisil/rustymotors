@@ -1,5 +1,4 @@
 import e from "express";
-import { Unpacker, PackCode, Packer, PackString } from "../constants.js";
 import {
   packShort,
   packByte,
@@ -21,6 +20,8 @@ import {
   unpackStringVar,
   unpackBlob,
 } from "./unpackers.js";
+import { VERSIONED_GAME_HEADER } from "./packStrings.js";
+import { PackCode, PackString, Packer, Unpacker } from "./constants.js";
 
 export const unpackers: Unpacker[] = [
   {
@@ -134,10 +135,15 @@ function getDataLength(packCode: PackCode, value: unknown) {
       return (value as Buffer).length / 2;
     case "STRING_FIXED":
       return (value as Buffer).length / 2;
+    case "VERSIONED_GAME_HEADER":
+      return 12;
   }
   throw new Error(`No data length found for pack code ${packCode}`);
 }
 
+/**
+ * Given a pack code and data, unpack the data into an array
+ */
 export function unpack(packCode: PackString, data: Buffer) {
   let dataOffset = 0;
   let packStringIndex = 0;
@@ -178,6 +184,27 @@ export function unpack(packCode: PackString, data: Buffer) {
       dataOffset += 2;
 
       // Move the index past the pack code
+      packStringIndex++;
+
+      continue;
+    }
+
+    // If the pack code is a nested pack string, unpack the nested pack string
+    if (code === "VERSIONED_GAME_HEADER") {
+      // Get the nested pack string
+      const nestedPackString = VERSIONED_GAME_HEADER;
+
+
+      // Unpack the nested pack string
+      const unpackedNested = unpack(nestedPackString, data.subarray(dataOffset));
+
+      // Add the unpacked nested data to the array
+      unpackedData.push(unpackedNested);
+
+      // Advance the offset past the unpacked nested data
+      dataOffset += getDataLength(code, unpackedNested);
+
+      // Advance the index past the nested pack string
       packStringIndex++;
 
       continue;
