@@ -1,3 +1,9 @@
+import {
+  Cipher,
+  Decipher,
+  createCipheriv,
+  createDecipheriv,
+} from "node:crypto";
 import { Socket } from "node:net";
 
 export interface ConnectionRecord {
@@ -6,6 +12,22 @@ export interface ConnectionRecord {
   remotePort: number;
   socket?: Socket;
 }
+
+interface CipherPair {
+  encrypt: Cipher;
+  decrypt: Decipher;
+}
+
+interface SessionKeyset {
+  customerId: number;
+  gameKey: CipherPair;
+  mcotsKey: CipherPair;
+}
+
+/**
+ * A map of session keys by customer ID
+ */
+const sessionKeys: Map<number, SessionKeyset> = new Map();
 
 const connections: ConnectionRecord[] = [];
 
@@ -62,4 +84,82 @@ export async function getConnectionIdForSocket(
   } catch (error) {
     throw new Error("Could not find or create connection record");
   }
+}
+
+/**
+ * Get the session key for a customer
+ * @param customer The customer ID
+ * @returns The session key, or undefined if one does not exist
+ */
+export async function getSessionKeyForCustomer(
+  customerId: number
+): Promise<CipherPair | undefined> {
+  const sessionKey = sessionKeys.get(customerId);
+  if (!sessionKey) {
+    return undefined;
+  }
+  return sessionKey.mcotsKey;
+}
+
+/**
+ * Update the session keyset for a customer ID
+ * @param customer The customer ID
+ * @param keyset The session keyset
+ */
+export async function updateSessionKeyForCustomer(
+  customer: number,
+  keyset: SessionKeyset
+) {
+  sessionKeys.set(customer, keyset);
+}
+
+/**
+ * Remove the session key for a customer
+ * @param customer The customer ID
+ */
+export async function removeSessionKeyForCustomer(customer: number) {
+  sessionKeys.delete(customer);
+}
+
+/**
+ * Generate encryption and decryption ciphers for a given session key
+ * @param sessionKey The session key
+ * @returns The encryption and decryption ciphers
+ */
+export async function generateSessionKeyset(
+  customerId: number,
+  sessionKey: Buffer
+): Promise<SessionKeyset> {
+  // Create the mcots keypair
+  const mcotsKey_encrypt = createCipheriv("rc4", sessionKey, "");
+  const mcotsKey_decrypt = createDecipheriv("rc4", sessionKey, "");
+
+  const mcotsKey: CipherPair = {
+    encrypt: mcotsKey_encrypt,
+    decrypt: mcotsKey_decrypt,
+  };
+
+  // Create the game keypair
+  const gameKey_decrypt = createDecipheriv(
+    "des-cbc",
+    sessionKey.subarray(0, 8),
+    Buffer.alloc(8)
+  );
+  const gameKey_encrypt = createCipheriv(
+    "des-cbc",
+    sessionKey.subarray(0, 8),
+    Buffer.alloc(8)
+  );
+
+  const gameKey: CipherPair = {
+    encrypt: gameKey_encrypt,
+    decrypt: gameKey_decrypt,
+  };
+
+  // Return the session keyset
+  return {
+    customerId,
+    gameKey,
+    mcotsKey,
+  };
 }

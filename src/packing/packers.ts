@@ -42,7 +42,7 @@ export function packLong(
 ) {
   const buffer = Buffer.alloc(4);
   if (typeof data !== "number") {
-    throw new Error("Data must be a number");
+    throw new Error(`Data must be a number, got ${typeof data}`);
   }
   if (endianness === "LE") {
     buffer.writeUInt32LE(data);
@@ -132,24 +132,16 @@ export function packBool(
   return buffer;
 }
 
-export function packLengthShort(
-  endianness: "LE" | "BE",
-  data: unknown,
-  length?: number,
-  includeLength: boolean = false
-) {
-  const buffer = Buffer.alloc(2);
-  if (typeof data !== "number") {
-    throw new Error("Data must be a number");
-  }
-  if (endianness === "LE") {
-    buffer.writeUInt16LE(data);
-  } else {
-    buffer.writeUInt16BE(data);
-  }
-  return buffer;
-}
 
+
+/**
+ * Packs a 2 byte length prefixed buffer
+ * @param endianness 
+ * @param data 
+ * @param length 
+ * @param includeLength 
+ * @returns 
+ */
 export function packStringVar(
   endianness: "LE" | "BE",
   data: unknown,
@@ -187,6 +179,9 @@ export function packStringVar(
   return buffer;
 }
 
+/**
+ * Packs a fixed length string without a length prefix
+ */
 export function packStringFixed(
   endianness: "LE" | "BE",
   data: unknown,

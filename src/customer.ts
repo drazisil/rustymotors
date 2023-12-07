@@ -37,6 +37,11 @@ export function addCustomer(customer: CustomerRecord) {
         throw new Error("Email already in use");
     }
 
+    // Verify that the id is a number
+    if (typeof customer.id !== "number") {
+        throw new Error(`ID must be a number, got ${typeof customer.id}`);
+    }
+
     // Verify that the id is not larger than 2 bytes
     if (customer.id > 65535) {
         throw new Error("ID must be less than 65535");
@@ -57,6 +62,8 @@ export function addCustomer(customer: CustomerRecord) {
 }
 
 let nextId: number = 1;
+
+
 
 addCustomer({
     id: nextId++,
