@@ -1,0 +1,30 @@
+# This workflow will run tests using node and then publish a package to GitHub Packages when a release is created
+# For more information see: https://docs.github.com/en/actions/publishing-packages/publishing-nodejs-packages
+
+name: Sentry Release
+
+on:
+  release:
+    types: [created]
+  workflow_dispatch:
+
+jobs:
+  sentry-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Create Sentry release
+        run: |
+          # Install the cli
+          curl -sL https://sentry.io/get-cli/ | bash
+          
+          # Setup configuration values
+          SENTRY_AUTH_TOKEN=<click-here-for-your-token>
+          SENTRY_ORG=drazisilcom
+          SENTRY_PROJECT=rustymotors
+          VERSION=`sentry-cli releases propose-version`
+          
+          # Workflow to create releases
+          sentry-cli releases new "$VERSION"
+          sentry-cli releases set-commits "$VERSION" --auto
+          sentry-cli releases finalize "$VERSION"
