@@ -7,6 +7,22 @@ import {
   webServer,
 } from "./src/index.js";
 
+// You can also use CommonJS `require('@sentry/node')` instead of `import`
+import * as Sentry from "@sentry/node";
+import { ProfilingIntegration } from "@sentry/profiling-node";
+
+Sentry.init({
+  dsn: 'https://91111368b47ff474f6102d7b5ecfaf1e@o1413557.ingest.sentry.io/4506354954928128',
+  integrations: [
+    new ProfilingIntegration(),
+  ],
+  // Performance Monitoring
+  tracesSampleRate: 1.0,
+  // Set sampling rate for profiling - this is relative to tracesSampleRate
+  profilesSampleRate: 1.0,
+  debug: true
+});
+
 let webServerProcess: Server;
 
 let running = false;
@@ -66,6 +82,8 @@ function handleKeypress(keypress: Buffer) {
   }
 }
 
+
+
 /**
  * Main program
  */
@@ -93,3 +111,7 @@ while (running) {
 }
 
 console.log("Program ended");
+
+process.on("uncaughtException", (err) => {
+  Sentry.captureException(err)
+})
