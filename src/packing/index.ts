@@ -19,9 +19,25 @@ import {
   unpackStringFixed,
   unpackStringVar,
   unpackBlob,
+  unpackStringFixed4,
+  unpackHexStringFixed2,
 } from "./unpackers.js";
-import { VERSIONED_GAME_HEADER } from "./packStrings.js";
-import { PackCode, PackString, Packer, Unpacker } from "./constants.js";
+import { VERSIONED_GAME_HEADER, packStrings } from "./packStrings.js";
+import { NestedPackString, PackCode, PackString, Packer, Unpacker } from "./constants.js";
+
+export function displayStringasHex(s: string) {
+  let hex = "";
+  for (let i = 0; i < s.length; i++) {
+    hex += s.charCodeAt(i).toString(16);
+  }
+  return hex;
+}
+
+export const nestedPackStrings: NestedPackString[] = [
+  "BASIC_HEADER",
+  "VERSIONED_GAME_HEADER",
+  "SERVER_HEADER",
+];
 
 export const unpackers: Unpacker[] = [
   {
@@ -69,6 +85,16 @@ export const unpackers: Unpacker[] = [
     direction: "inbound",
     packFunction: unpackStringFixed,
   },
+  {
+    packCode: "STRING_FIXED_4",
+    direction: "inbound",
+    packFunction: unpackStringFixed4
+  },
+  {
+    packCode: "HEX_STRING_FIXED_2",
+    direction: "inbound",
+    packFunction: unpackHexStringFixed2
+  }
 ];
 
 export const packers: Packer[] = [
@@ -137,6 +163,14 @@ function getDataLength(packCode: PackCode, value: unknown) {
       return (value as Buffer).length / 2;
     case "VERSIONED_GAME_HEADER":
       return 12;
+    case "STRING_FIXED_4":
+      return 4;
+    case "STRING_FIXED_32":
+      return 32;
+    case "HEX_STRING_FIXED_2":
+      return 2;
+    case "SERVER_HEADER":
+      return 11;
   }
   throw new Error(`No data length found for pack code ${packCode}`);
 }
@@ -167,6 +201,13 @@ export function unpack(packCode: PackString, data: Buffer) {
       break;
     }
 
+    if (code === "REST") {
+      const rest = data.subarray(dataOffset);
+      console.log(`Rest: ${rest.toString("hex")}`);
+      unpackedData.push(rest);
+      break;
+    }
+
     // If the code is an endianness code, change the endianness
     if (code === "LE" || code === "BE") {
       endianness = code;
@@ -190,9 +231,14 @@ export function unpack(packCode: PackString, data: Buffer) {
     }
 
     // If the pack code is a nested pack string, unpack the nested pack string
-    if (code === "VERSIONED_GAME_HEADER") {
+    if (nestedPackStrings.includes(code as NestedPackString)) {
       // Get the nested pack string
-      const nestedPackString = VERSIONED_GAME_HEADER;
+      const nestedPackString = packStrings.get(code as NestedPackString);
+
+      // If the nested pack string is not found, throw an error
+      if (!nestedPackString) {
+        throw new Error(`No nested pack string found for pack code ${code}`);
+      }
 
 
       // Unpack the nested pack string

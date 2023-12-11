@@ -10,6 +10,7 @@ import {
 // You can also use CommonJS `require('@sentry/node')` instead of `import`
 import * as Sentry from "@sentry/node";
 import { ProfilingIntegration } from "@sentry/profiling-node";
+import { version } from './package.json';
 
 Sentry.init({
   dsn: 'https://91111368b47ff474f6102d7b5ecfaf1e@o1413557.ingest.sentry.io/4506354954928128',
@@ -20,7 +21,8 @@ Sentry.init({
   tracesSampleRate: 1.0,
   // Set sampling rate for profiling - this is relative to tracesSampleRate
   profilesSampleRate: 1.0,
-  debug: true
+
+  release: version,
 });
 
 let webServerProcess: Server;

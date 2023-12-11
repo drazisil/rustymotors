@@ -12,13 +12,7 @@ import { PackString } from "../packing/constants.js";
 import { pack, unpack } from "../packing/index.js";
 import { Transaction } from "@sentry/node";
 
-function displayStringasHex(s: string) {
-  let hex = "";
-  for (let i = 0; i < s.length; i++) {
-    hex += s.charCodeAt(i).toString(16);
-  }
-  return hex;
-}
+
 
 function decryptSessionKey(encryptedSessionKey: string): Buffer {
   // Get the private key
