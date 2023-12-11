@@ -13,10 +13,22 @@ export const VERSIONED_GAME_HEADER: PackString = [
   "LONG",
 ];
 
+// Server header
 export const SERVER_HEADER: PackString = [
   "LE",
-  "LENGTH_SHORT",
-  "STRING_FIXED",
+  "SHORT", // Length
+  "STRING_FIXED_4", // "TMOC"
+  "LONG", // sequence number
+  "BYTE" // Flags
+];
+
+export const SERVER_MESSAGE: PackString = [
+  "LE",
+  "SERVER_HEADER",
+  "LE",
+  "HEX_STRING_FIXED_2", // message code
+  "REST"
+];
 
 // Login inbound
 export const login_inbound: PackString = [
@@ -65,6 +77,7 @@ export const check_plate_name_inbound: PackString = [
 export const packStrings:Map<string, PackString> = new Map([
   ["BASIC_HEADER", BASIC_HEADER],
   ["VERSIONED_GAME_HEADER", VERSIONED_GAME_HEADER],
+  ["SERVER_HEADER", SERVER_HEADER],
   ["login_inbound", login_inbound],
   ["get_profiles_inbound", get_profiles_inbound],
   ["check_profile_name_inbound", check_profile_name_inbound],

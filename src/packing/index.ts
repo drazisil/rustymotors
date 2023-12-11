@@ -19,6 +19,8 @@ import {
   unpackStringFixed,
   unpackStringVar,
   unpackBlob,
+  unpackStringFixed4,
+  unpackHexStringFixed2,
 } from "./unpackers.js";
 import { VERSIONED_GAME_HEADER, packStrings } from "./packStrings.js";
 import { NestedPackString, PackCode, PackString, Packer, Unpacker } from "./constants.js";
@@ -83,6 +85,16 @@ export const unpackers: Unpacker[] = [
     direction: "inbound",
     packFunction: unpackStringFixed,
   },
+  {
+    packCode: "STRING_FIXED_4",
+    direction: "inbound",
+    packFunction: unpackStringFixed4
+  },
+  {
+    packCode: "HEX_STRING_FIXED_2",
+    direction: "inbound",
+    packFunction: unpackHexStringFixed2
+  }
 ];
 
 export const packers: Packer[] = [
@@ -151,6 +163,14 @@ function getDataLength(packCode: PackCode, value: unknown) {
       return (value as Buffer).length / 2;
     case "VERSIONED_GAME_HEADER":
       return 12;
+    case "STRING_FIXED_4":
+      return 4;
+    case "STRING_FIXED_32":
+      return 32;
+    case "HEX_STRING_FIXED_2":
+      return 2;
+    case "SERVER_HEADER":
+      return 11;
   }
   throw new Error(`No data length found for pack code ${packCode}`);
 }
@@ -178,6 +198,13 @@ export function unpack(packCode: PackString, data: Buffer) {
     );
 
     if (code === "END") {
+      break;
+    }
+
+    if (code === "REST") {
+      const rest = data.subarray(dataOffset);
+      console.log(`Rest: ${rest.toString("hex")}`);
+      unpackedData.push(rest);
       break;
     }
 

@@ -11,11 +11,17 @@ export type PackCode =
   | "LENGTH_SHORT" // 2 bytes - Number - Length of the following data
   | "STRING_VAR" // Variable length string - String length is in the pack string, but not included in the packed data
   | "STRING_FIXED" // Fixed length string - Must be preceded by a LENGTH_SHORT
+  | "REST" // Rest of the data - Must be the last pack code in the pack string
   | "END" // End of pack string - Discard any remaining data
   // Nested pack strings
   | "VERSIONED_GAME_HEADER"
   | "BASIC_HEADER"
-  | "SERVER_HEADER";
+  | "SERVER_HEADER"
+  // Fixed length pack strings
+  | "STRING_FIXED_4"
+  | "STRING_FIXED_32"
+  | "HEX_STRING_FIXED_2";
+
 
 export type NestedPackString =
   | "BASIC_HEADER" // 4 bytes - Basic header

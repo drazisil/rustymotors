@@ -69,3 +69,33 @@ export function unpackStringFixed(
   }
   throw new Error("Length must be provided for fixed length string");
 }
+
+export function unpackStringFixed4(
+  endianness: "LE" | "BE",
+  data: Buffer,
+  length = 4
+) {
+  if (length) {
+    return data.subarray(0, length).toString();
+  }
+  throw new Error("Length must be provided for fixed length string");
+}
+
+export function unpackHexStringFixed2(
+  endianness: "LE" | "BE",
+  data: Buffer,
+  length = 2
+) {
+  if (length) {
+    if (endianness === "LE") {
+      return data.subarray(0, length).toString("hex").match(/../g)?.reverse().join("");
+    }
+    return data.subarray(0, length).toString("hex");
+    
+  }
+  throw new Error("Length must be provided for fixed length string");
+}
+
+export function unpackRest(endianness: "LE" | "BE", data: Buffer) {
+  return data;
+}

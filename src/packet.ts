@@ -6,6 +6,8 @@ import { handleGetProfiles } from "./handlers/handleGetProfiles.js";
 import { handleLogin } from "./handlers/handleLogin.js";
 import { unpack } from "./packing/index.js";
 import {
+  SERVER_HEADER,
+  SERVER_MESSAGE,
   check_plate_name_inbound,
   check_profile_name_inbound,
   get_profiles_inbound,
@@ -55,6 +57,12 @@ async function parseGameMessage(
   connection: ConnectionRecord,
   transaction: Sentry.Transaction
 ) {
+  // Start a transaction
+  const transaction2 = Sentry.startTransaction({
+    name: "parseGameMessage",
+    op: "function",
+  });
+
   // Get the message ID
   const messageId = data.readUInt16BE(0);
 
@@ -65,6 +73,7 @@ async function parseGameMessage(
 
   // If the message type is not found, throw an error
   if (!messageType) {
+
     throw new Error(`No message type found for message ID ${messageId}`);
   }
 
@@ -79,6 +88,9 @@ async function parseGameMessage(
 
   // Handle the message
   await messageType.handler(connection, unpackedMessage, transaction);
+
+  // Finish the transaction
+  transaction2.finish();
 
   return;
 }
@@ -95,19 +107,24 @@ async function parseServerMessage(
   });
 
   // Verify the message is long enough
-  if (data.length < 6) {
+  if (data.length < 15) {
     throw new Error(`Message is too short: ${data.toString("hex")}`);
   }
 
+  // Unpack the message
+  const unpackedMessage = unpack(SERVER_MESSAGE, data);
+
+  // Log the unpacked message
+  console.log(`Unpacked message: ${unpackedMessage}`);
+
   // Verify the message signature
-  const sig = data.subarray(2, 6);
-  if (sig.toString("utf8") !== "MCOT") {
-    throw new Error(`Invalid message signature: ${sig.toString("utf8")}`);
+  const sig = (unpackedMessage[0] as Array<any>)[1] as string;
+  if (sig !== "TOMC") {
+    throw new Error(`Invalid message signature: ${sig}`);
   }
 
   // Check the message flags
   const flags = data.readUInt16BE(6);
-
 }
 
 export async function parseDataWithConnection(
@@ -135,7 +152,7 @@ export async function parseDataWithConnection(
 
     if (serverPorts.includes(connection.localPort)) {
       // This is an transaction server message
-      return parseServerMessage(data, connection, transaction);      
+      return parseServerMessage(data, connection, transaction);
     }
 
     throw new Error(
