@@ -1,9 +1,17 @@
 import { ConnectionRecord } from "./connection.js";
-import { MessageType,  } from "./constants.js";
+import { MessageType } from "./constants.js";
+import { handleCheckPlateName } from "./handlers/handleCheckPlateName.js";
+import { handleCheckProfileName } from "./handlers/handleCheckProfileName.js";
+import { handleGetProfiles } from "./handlers/handleGetProfiles.js";
 import { handleLogin } from "./handlers/handleLogin.js";
 import { unpack } from "./packing/index.js";
-import { login_inbound } from "./packing/packStrings.js";
-import * as Sentry from "@sentry/node"
+import {
+  check_plate_name_inbound,
+  check_profile_name_inbound,
+  get_profiles_inbound,
+  login_inbound,
+} from "./packing/packStrings.js";
+import * as Sentry from "@sentry/node";
 
 export function verifyDataType(data: any, type: string) {
   if (typeof data !== type) {
@@ -11,60 +19,134 @@ export function verifyDataType(data: any, type: string) {
   }
 }
 
-const messageTypes: MessageType[] = [
+const gameMessageTypes: MessageType[] = [
   {
-    messageId: 0x501,
+    messageId: 0x501, // 1281
     messageName: "login",
     direction: "inbound",
     packString: login_inbound,
     handler: handleLogin,
   },
+  {
+    messageId: 0x532, // 1330
+    messageName: "get profiles",
+    direction: "inbound",
+    packString: get_profiles_inbound,
+    handler: handleGetProfiles,
+  },
+  {
+    messageId: 0x533, // 1331
+    messageName: "check profile name",
+    direction: "inbound",
+    packString: check_profile_name_inbound,
+    handler: handleCheckProfileName,
+  },
+  {
+    messageId: 0x534, // 1332
+    messageName: "check plate name",
+    direction: "inbound",
+    packString: check_plate_name_inbound,
+    handler: handleCheckPlateName,
+  },
 ];
+
+async function parseGameMessage(
+  data: Buffer,
+  connection: ConnectionRecord,
+  transaction: Sentry.Transaction
+) {
+  // Get the message ID
+  const messageId = data.readUInt16BE(0);
+
+  // Get the message type
+  const messageType = gameMessageTypes.find(
+    (messageType) => messageType.messageId === messageId
+  );
+
+  // If the message type is not found, throw an error
+  if (!messageType) {
+    throw new Error(`No message type found for message ID ${messageId}`);
+  }
+
+  // Log the message type
+  console.log(`Message type: ${messageType.messageName}`);
+
+  // Unpack the message
+  const unpackedMessage = unpack(messageType.packString, data);
+
+  // Log the unpacked message
+  console.log(`Unpacked message: ${unpackedMessage}`);
+
+  // Handle the message
+  await messageType.handler(connection, unpackedMessage, transaction);
+
+  return;
+}
+
+async function parseServerMessage(
+  data: Buffer,
+  connection: ConnectionRecord,
+  transaction: Sentry.Transaction
+) {
+  // Start a transaction
+  const transaction2 = Sentry.startTransaction({
+    name: "parseServerMessage",
+    op: "function",
+  });
+
+  // Verify the message is long enough
+  if (data.length < 6) {
+    throw new Error(`Message is too short: ${data.toString("hex")}`);
+  }
+
+  // Verify the message signature
+  const sig = data.subarray(2, 6);
+  if (sig.toString("utf8") !== "MCOT") {
+    throw new Error(`Invalid message signature: ${sig.toString("utf8")}`);
+  }
+
+  // Check the message flags
+  const flags = data.readUInt16BE(6);
+
+}
 
 export async function parseDataWithConnection(
   data: Buffer,
   connection: ConnectionRecord
 ) {
-  const transaction = Sentry.startTransaction(
-  {
+  const transaction = Sentry.startTransaction({
     name: "parseDataWithConnection",
-    op: "function"
-  }  
-  )
+    op: "function",
+  });
   try {
-  console.log(`Connection ID: ${connection.id}`);
-  console.log(`Data: ${data.toString("hex")}`);
+    // Log the data
+    console.log(`Data: ${data.toString("hex")}`);
 
-  // Get the message code
-  const messageCode = data.readUInt16BE(0);
+    // What type of message is this?
 
-  // Look up the message type by message code
-  const messageType = messageTypes.find(
-    (messageType) => messageType.messageId === messageCode
-  );
+    const gamePorts = [8226, 8228, 7003];
 
-  // If the message type is not found, throw an error
-  if (!messageType) {
-    throw new Error(`No message type found for message code ${messageCode}`);
-  }
+    const serverPorts = [43300];
 
-  // Get the pack string for this message type
-  const packString = messageType.packString;
+    if (gamePorts.includes(connection.localPort)) {
+      // This is a game message
+      return parseGameMessage(data, connection, transaction);
+    }
 
-  // Unpack the data
-  const unpacked = unpack(packString, data);
+    if (serverPorts.includes(connection.localPort)) {
+      // This is an transaction server message
+      return parseServerMessage(data, connection, transaction);      
+    }
 
-  console.log(unpacked);
+    throw new Error(
+      `Unknown local port ${connection.localPort} for connection ${connection.id}`
+    );
 
-    // Call the handler
-    messageType.handler(connection, unpacked, transaction);
-    transaction.finish()
+    transaction.finish();
   } catch (error) {
     console.error(error);
-    Sentry.captureException(error)
-    transaction.finish()
-    Sentry.flush()
+    Sentry.captureException(error);
+    transaction.finish();
     return;
   }
-
 }

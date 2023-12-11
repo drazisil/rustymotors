@@ -36,8 +36,9 @@ const mcotsServer = net.createServer();
  */
 const connectionHandler = async (socket: net.Socket) => {
   console.log(`Connection from ${socket.remoteAddress}:${socket.remotePort}`);
-  const { remoteAddress, remotePort } = socket;
+  const { localPort, remoteAddress, remotePort } = socket;
   const connection = await getConnectionIdForSocket(
+    localPort ?? -9999,
     remoteAddress ?? "unknownAddress",
     remotePort ?? -9999,
     socket
@@ -53,6 +54,19 @@ const connectionHandler = async (socket: net.Socket) => {
 
   socket.on("data", async (data) => {
     await parseDataWithConnection(data, connection);
+  });
+
+  socket.on("close", () => {
+    console.log("Connection closed");
+  });
+
+  socket.on("error", (error: NodeJS.ErrnoException) => {
+    if (error.code === "ECONNRESET") {
+      console.log("Connection reset");
+      return;
+    }
+    console.error(error);
+    Sentry.captureException(error)
   });
 };
 

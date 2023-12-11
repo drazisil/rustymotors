@@ -13,10 +13,14 @@ export type PackCode =
   | "STRING_FIXED" // Fixed length string - Must be preceded by a LENGTH_SHORT
   | "END" // End of pack string - Discard any remaining data
   // Nested pack strings
-    | "VERSIONED_GAME_HEADER";
+  | "VERSIONED_GAME_HEADER"
+  | "BASIC_HEADER"
+  | "SERVER_HEADER";
 
-export type NestedPackString = 
-    "VERSIONED_GAME_HEADER"; // 12 bytes - Versioned header
+export type NestedPackString =
+  | "BASIC_HEADER" // 4 bytes - Basic header
+  | "VERSIONED_GAME_HEADER" // 12 bytes - Versioned header
+  | "SERVER_HEADER"; // 12 bytes - Server header
 
 export type PackString = PackCode[];
 

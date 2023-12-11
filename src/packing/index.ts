@@ -20,8 +20,22 @@ import {
   unpackStringVar,
   unpackBlob,
 } from "./unpackers.js";
-import { VERSIONED_GAME_HEADER } from "./packStrings.js";
-import { PackCode, PackString, Packer, Unpacker } from "./constants.js";
+import { VERSIONED_GAME_HEADER, packStrings } from "./packStrings.js";
+import { NestedPackString, PackCode, PackString, Packer, Unpacker } from "./constants.js";
+
+export function displayStringasHex(s: string) {
+  let hex = "";
+  for (let i = 0; i < s.length; i++) {
+    hex += s.charCodeAt(i).toString(16);
+  }
+  return hex;
+}
+
+export const nestedPackStrings: NestedPackString[] = [
+  "BASIC_HEADER",
+  "VERSIONED_GAME_HEADER",
+  "SERVER_HEADER",
+];
 
 export const unpackers: Unpacker[] = [
   {
@@ -190,9 +204,14 @@ export function unpack(packCode: PackString, data: Buffer) {
     }
 
     // If the pack code is a nested pack string, unpack the nested pack string
-    if (code === "VERSIONED_GAME_HEADER") {
+    if (nestedPackStrings.includes(code as NestedPackString)) {
       // Get the nested pack string
-      const nestedPackString = VERSIONED_GAME_HEADER;
+      const nestedPackString = packStrings.get(code as NestedPackString);
+
+      // If the nested pack string is not found, throw an error
+      if (!nestedPackString) {
+        throw new Error(`No nested pack string found for pack code ${code}`);
+      }
 
 
       // Unpack the nested pack string

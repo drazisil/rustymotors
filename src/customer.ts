@@ -17,6 +17,10 @@ export function getCustomerByUsername(username: string) {
     return undefined;
 }
 
+export function getCustomerById(id: number) {
+    return validUsers.get(id);
+}
+
 export function getCustomerByEmail(email: string) {
     for (const customer of validUsers.values()) {
         if (customer.email === email) {

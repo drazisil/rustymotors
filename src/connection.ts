@@ -10,6 +10,7 @@ export interface ConnectionRecord {
   id: string;
   remoteAddress: string;
   remotePort: number;
+  localPort: number;
   socket?: Socket;
 }
 
@@ -32,6 +33,7 @@ const sessionKeys: Map<number, SessionKeyset> = new Map();
 const connections: ConnectionRecord[] = [];
 
 async function createConnectionRecord(
+  localPort: number,
   remoteAddress: string,
   remotePort: number,
   socket?: Socket
@@ -45,6 +47,7 @@ async function createConnectionRecord(
     id: `${remoteAddress}:${remotePort}`,
     remoteAddress,
     remotePort,
+    localPort,
     socket,
   };
   connections.push(connection);
@@ -65,12 +68,14 @@ async function findConnectionRecord(
 
 /**
  * Get the connection record for a socket
+ * @param localPort The local port of the socket
  * @param remoteAddress The remote address of the socket
  * @param remotePort The remote port of the socket
  * @param socket The socket - if provided, a new connection record will be created if one does not exist
  * @returns The connection record, or undefined if one does not exist and cannot be created
  */
 export async function getConnectionIdForSocket(
+  localPort: number,
   remoteAddress: string,
   remotePort: number,
   socket?: Socket
@@ -79,7 +84,7 @@ export async function getConnectionIdForSocket(
   try {
     const connection =
       (await findConnectionRecord(remoteAddress, remotePort)) ||
-      createConnectionRecord(remoteAddress, remotePort, socket);
+      createConnectionRecord(localPort, remoteAddress, remotePort, socket);
     return connection;
   } catch (error) {
     throw new Error("Could not find or create connection record");
